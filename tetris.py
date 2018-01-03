@@ -80,6 +80,7 @@ class TetrisBoard(tk.Frame):
 
     def update_hold_piece(self):
         self.canvas.delete("hold_piece")
+        if self.game.hold == None: return
         center = (-2,1)
         self.draw_piece(self.game.hold, 0, center, "hold_piece")
 
@@ -129,6 +130,7 @@ class TetrisGame():
         self.piece_queue = self.PieceQueue()
         self.hold = None
         self.already_held = False
+        self.board.update_hold_piece()
         self.add_new_piece()
 
     def add_new_piece(self, from_hold=False):
