@@ -37,6 +37,7 @@ pieces = [
                 [(1,0), (0,0), (0,-1), (-1,0)]
             ]
           ]
+scoring_guide = [0, 10, 30, 60, 100]
 piece_colors = {0: "LightGoldenrod1", 1: "cyan", 2: "SeaGreen1", 3: "IndianRed1", 4: "coral", 5: "cornflower blue", 6: "MediumPurple1"}
 rows = 20
 columns = 10
@@ -130,6 +131,8 @@ class TetrisGame():
         self.piece_queue = self.PieceQueue()
         self.hold = None
         self.already_held = False
+        self.score, self.consecutive_clears = 0,0
+        self.tetris_before = False
         self.board.update_hold_piece()
         self.add_new_piece()
 
@@ -218,13 +221,28 @@ class TetrisGame():
             self.b[y][x] = self.piece_ind+1
             if sum(val > 0 for val in self.b[y]) == columns:
                 to_delete.append(y)
+        self.clear_rows(to_delete)
+        self.add_new_piece()
+        self.board.update_next_pieces()
+
+    def clear_rows(self, to_delete):
         if len(to_delete) > 0:
             self.delete_rows(to_delete)
             self.board.draw_board()
+            self.update_score(len(to_delete))
+            self.consecutive_clears = self.consecutive_clears + 1
+            if len(to_delete) == 4:
+                self.tetris_before = True
         else:
             self.board.show_move("secured")
-        self.add_new_piece()
-        self.board.update_next_pieces()
+            self.consecutive_clears = 0
+            self.tetris_before = False
+
+    def update_score(self, lines_cleared):
+        self.score = self.score + scoring_guide[lines_cleared] + 10 * self.consecutive_clears
+        if self.tetris_before:
+            self.score = self.score + 100
+        print(self.score)
 
     def set_game_over(self):
         self.game_over = True
