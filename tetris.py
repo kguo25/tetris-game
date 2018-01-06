@@ -50,24 +50,24 @@ class TetrisBoard(tk.Frame):
 
         tk.Frame.__init__(self, parent)
         self.canvas = tk.Canvas(self, borderwidth=0, highlightthickness=0,
-                                width=(columns+9)*size, height=rows*size, background="gainsboro")
+                                width=(columns+10)*size, height=rows*size, background="gainsboro")
         self.canvas.pack(side="top", fill="both", expand=False, padx=2, pady=2)
         self.pack(side="top", fill="both", expand="True", padx=4, pady=4)
 
-    def get_rectangle_coordinate(self, x, y):
-        x1, y1 = (x+4) * size, y * size
+    def get_rectangle_coordinate(self, x, y, x_offset, y_offset):
+        x1, y1 = (x+x_offset) * size, (y+y_offset) * size
         x2, y2 = x1 + size, y1 + size
         return (x1, y1, x2, y2)
     
     def show_move(self, tag):
         self.canvas.delete("falling")
-        self.draw_piece(self.game.piece_ind, self.game.rot_ind, self.game.center, tag)
+        self.draw_piece(self.game.piece_ind, self.game.rot_ind, self.game.center, 5, 0, tag)
 
     def draw_board(self):
-        self.canvas.delete("secured","info")
+        self.canvas.delete("secured")
         for x in range(columns):
             for y in range(rows):
-                x1, y1, x2, y2 = self.get_rectangle_coordinate(x, y)
+                x1, y1, x2, y2 = self.get_rectangle_coordinate(x, y, 5, 0)
                 if self.game.b[y][x] > 0:
                     self.canvas.create_rectangle(x1, y1, x2, y2, outline="gray10", fill=piece_colors[self.game.b[y][x]-1], tags="secured")
                 else:
@@ -77,29 +77,48 @@ class TetrisBoard(tk.Frame):
         self.canvas.delete("next_pieces")
         for i, piece_ind in enumerate(self.game.piece_queue.get_queue()):
             center = (columns + 2, 1+4*i)
-            self.draw_piece(piece_ind, 0, center, "next_pieces")
+            self.draw_piece(piece_ind, 0, center, 5, 2, "next_pieces")
 
     def update_hold_piece(self):
         self.canvas.delete("hold_piece")
         if self.game.hold == None: return
-        center = (-2,1)
-        self.draw_piece(self.game.hold, 0, center, "hold_piece")
+        center = (2,1)
+        self.draw_piece(self.game.hold, 0, center, 0, 2, "hold_piece")
 
-    def draw_piece(self, piece_ind, rot_ind, center, tag):
+    def update_score(self):
+        self.canvas.delete("score")
+        f = font.Font(size=15)
+        self.canvas.create_text((int)(-2*size)+80, (int)(rows/2*size), 
+            anchor=tk.CENTER, text=str(self.game.score), state=tk.DISABLED, fill="black", font=f, tags="score")
+
+    def set_up_board(self):
+        self.canvas.delete("end-info")
+        f = font.Font(size=15)
+        self.canvas.create_text((int)(-2*size)+80, (int)(rows/2*size)-20, 
+            anchor=tk.CENTER, text="Score", state=tk.DISABLED, fill="black", font=f, tags="info")
+        self.canvas.create_text((int)(-2*size)+80, 20, 
+            anchor=tk.CENTER, text="Hold", state=tk.DISABLED, fill="black", font=f, tags="info")
+        self.canvas.create_text((int)((columns+3)*size)+80, 20, 
+            anchor=tk.CENTER, text="Next", state=tk.DISABLED, fill="black", font=f, tags="info")
+        self.update_score()
+        self.update_hold_piece()
+        self.update_next_pieces()
+
+    def draw_piece(self, piece_ind, rot_ind, center, x_offset, y_offset, tag):
         for point in pieces[piece_ind][rot_ind]:
             x = point[1] + center[0]
             y = -point[0] + center[1]
-            x1, y1, x2, y2 = self.get_rectangle_coordinate(x,y)
+            x1, y1, x2, y2 = self.get_rectangle_coordinate(x, y, x_offset, y_offset)
             self.canvas.create_rectangle(x1, y1, x2, y2, outline="gray10", fill=piece_colors[piece_ind], tags=tag)
 
     def game_over(self):
         f = font.Font(size=20, weight="bold")
-        self.canvas.create_rectangle(80,150, 280, 250, outline="black", fill="black", tags="info")
-        self.canvas.create_text((int)(columns/2*size)+80, (int)(rows/2*size)-20, 
-            anchor=tk.CENTER, text="Game Over", state=tk.DISABLED, fill="white", font=f, tags="info")
+        self.canvas.create_rectangle(100, 150, 300, 250, outline="black", fill="black", tags="end-info")
+        self.canvas.create_text((int)(columns/2*size)+100, (int)(rows/2*size)-20, 
+            anchor=tk.CENTER, text="Game Over", state=tk.DISABLED, fill="white", font=f, tags="end-info")
         new_game_button = tk.Button(self.game.root, text="New Game", command=self.controller.new_game)
-        button_window = self.canvas.create_window((int)(columns/2*size)+80, (int)(rows/2*size)+20, 
-            anchor=tk.CENTER, window=new_game_button, tag="info")
+        button_window = self.canvas.create_window((int)(columns/2*size)+100, (int)(rows/2*size)+20, 
+            anchor=tk.CENTER, window=new_game_button, tag="end-info")
 
 class TetrisGame():
     class PieceQueue():
@@ -133,7 +152,7 @@ class TetrisGame():
         self.already_held = False
         self.score, self.consecutive_clears = 0,0
         self.tetris_before = False
-        self.board.update_hold_piece()
+        self.board.set_up_board()
         self.add_new_piece()
 
     def add_new_piece(self, from_hold=False):
@@ -242,7 +261,7 @@ class TetrisGame():
         self.score = self.score + scoring_guide[lines_cleared] + 10 * self.consecutive_clears
         if self.tetris_before:
             self.score = self.score + 100
-        print(self.score)
+        self.board.update_score()
 
     def set_game_over(self):
         self.game_over = True
